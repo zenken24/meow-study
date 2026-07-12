@@ -1,104 +1,74 @@
 # meow-study
 
-A cozy study desk, now with real accounts, rich notes, a kanban task board,
-a real audio soundboard, Pomodoro sound effects and goals, streak badges,
-and optional Google Calendar sync.
+> A cozy study desk with accounts, notes, tasks, soundscapes, Pomodoro flow, streaks, and calendar sync.
 
-## 1. Install
+**Live app:** [Open meow-study on Netlify](https://meow-study.netlify.app)
+
+## Welcome
+
+meow-study is a focused productivity space built to feel calm, tactile, and useful. It combines study tools, a soundboard, note capture, task tracking, and gentle progress feedback in one place.
+
+## Try It
+
+You can use the app right now here:
+
+[Launch meow-study](https://meow-study.netlify.app)
+
+## Quick Start
+
+1. Open the live app or run it locally.
+2. Sign in and connect your Supabase project.
+3. Load the database schema and add the bundled media files.
+4. Start tracking tasks, notes, sessions, and streaks.
+
+## Local Setup
+
+Install dependencies:
 
 ```
 npm install
 ```
 
-## 2. Connect Supabase
+Connect Supabase in `src/supabaseClient.js` by filling in `SUPABASE_URL` and `SUPABASE_ANON_KEY` from Supabase Settings > API Keys.
 
-`src/supabaseClient.js` — fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`
-from Supabase → Settings → API Keys.
+Run the database schema by opening the SQL Editor, creating a new query, pasting all of `schema.sql`, and running it. It is safe to re-run on older versions. The schema adds task columns, subtasks, due dates, folders, expanded note fields, labels, reminders, voice/image/drawing support, session history, badges, calendar metadata, sound mix settings, and the `notes-media` bucket.
 
-## 3. Run the database schema
+See `public/ADD_YOUR_FILES_HERE.txt` for the exact filenames and folders you need to add. It lists the required images, ambiance tracks, and Pomodoro sound effects, including the filenames that need a quick rename.
 
-SQL Editor → New query → paste all of `schema.sql` → Run. Safe to re-run
-even over older versions — it now adds: task columns/subtasks/due dates,
-a `folders` table, a much bigger `notes` table (type, color, pinned,
-archived, labels, reminders, list/voice/image/drawing fields), a
-`label_colors` table, `pomodoro_sessions` history, a `badges` table, extra
-`calendar_events` columns (category/color/google_event_id), a
-`sound_mixes` field in settings, and a third storage bucket (`notes-media`)
-alongside the existing `avatars`/`backgrounds` ones.
+## Optional Google Calendar Sync
 
-## 4. Add your files
+meow-study can reuse your existing Google sign-in for calendar sync. No new Google Cloud project is required.
 
-See `public/ADD_YOUR_FILES_HERE.txt` for exact filenames and folders —
-3 images, 4 ambiance audio files, 3 Pomodoro sound effects. Three of the
-sound effect files need a quick rename (no spaces/capitals) — the note
-explains exactly what to rename each one to.
+1. Sign in with Google in the app.
+2. Approve the extra calendar access prompt the first time it appears.
+3. If your OAuth consent screen is still in Testing mode, make sure your account is added as a test user.
 
-## 5. (Optional) Enable Google Calendar sync
+After that, events you add in the Calendar panel are created on your Google Calendar too. If sync stops working, sign out and sign back in to refresh the access token.
 
-This reuses your existing Google sign-in — no new Google Cloud project
-needed — but it does need one addition:
+## Run Locally or Deploy
 
-1. Google Cloud Console → your OAuth client → under **Scopes**, you don't
-   need to add anything manually here; the app now requests the
-   `calendar.events` scope automatically when someone signs in with Google.
-2. The first time you sign in with Google *after* this update, Google will
-   show an extra consent line about calendar access — approve it.
-3. If your app is still in "Testing" mode in the OAuth consent screen
-   (normal for a personal project), only test users you've explicitly
-   added can grant this scope — add your own Google account there if you
-   haven't already.
+Start the app locally with:
 
-Once granted, any event you add in the Calendar panel also gets created on
-your real Google Calendar. Note: Google only hands over this access token
-at the moment of sign-in — if sync ever stops working, sign out and back
-in with Google to refresh it.
-
-## 6. Run locally / deploy
-
-Same as before:
 ```
 npm run dev
 ```
-for local testing, or push to GitHub and let Netlify build it (`npm run
-build`, publish directory `dist` — already set in `netlify.toml`).
 
-## What's included now
+To deploy, push to GitHub and let Netlify build it with `npm run build`. The publish directory is `dist`, already configured in `netlify.toml`.
 
-- **Foundation**: light/dark theme, custom backgrounds, profile picture,
-  username, email/password change, welcome greeting, in-app toasts instead
-  of browser alerts
-- **Soundboard**: real audio files (rain/cafe/fire/ocean waves), saved mix
-  presets
-- **Pomodoro**: task picker (auto-moves the task to "In Progress"), real
-  sound effects, "another session?" prompt, daily goal progress bar,
-  auto-start toggle, full session history logged per task
-- **Tasks**: Todo / In Progress / Completed columns, inline editing,
-  subtasks, due dates with overdue highlighting, time-spent tracking
-- **Media**: link history with back/forward navigation
-- **Streak**: weekly recap ("up X min from last week"), 7 achievement
-  badges
-- **Notes**: rich text (bold/italic/underline/alignment/font/size), five
-  note types (text/list/voice/image/drawing), color-coded labels, note
-  colors, pinning, folders, archive, full-text/label/type search, 3
-  templates, backlinks via `[[Note Title]]`, time-based + recurring
-  reminders (in-tab + OS notification if permitted), export to .txt/.md,
-  share via your own email client
-- **Calendar**: category color-coding, one-way sync to real Google
-  Calendar when signed in with Google
+## What’s Included
 
-## Known limitations, honestly
+- **Foundation**: light/dark theme, custom backgrounds, profile picture, username, email/password changes, welcome greeting, in-app toasts
+- **Soundboard**: real audio files for rain, cafe, fire, and ocean waves, plus saved mix presets
+- **Pomodoro**: task picker, real sound effects, session prompts, daily goal progress, auto-start toggle, full session history
+- **Tasks**: Todo / In Progress / Completed columns, inline editing, subtasks, due dates, overdue highlighting, time tracking
+- **Media**: link history with back and forward navigation
+- **Streak**: weekly recap and achievement badges
+- **Notes**: rich text editing, five note types, labels, note colors, pinning, folders, archive, search, templates, backlinks, reminders, export
+- **Calendar**: category color-coding and one-way sync to Google Calendar
 
-- **Voice transcription** uses the browser's built-in speech recognition,
-  which is Chrome-only. Recording itself works in any browser; live
-  transcript text only appears in Chrome.
-- **OCR** (image to text) runs entirely in your browser via Tesseract.js —
-  free, no API key, but slower and less accurate than a paid cloud OCR
-  service, especially on handwriting.
-- **Google Calendar sync is one-way** (meow-study to Google). Editing or
-  deleting an event later doesn't push that change to Google yet — that'd
-  need storing and reconciling both sides' edit history, a bigger job for
-  a future pass.
-- **Rich text formatting** uses the browser's built-in `execCommand` API.
-  It's supported everywhere but is an older/simpler approach than a modern
-  editor library — good for bold/italic/underline/fonts/alignment, not
-  meant for anything more advanced.
+## Known Limitations
+
+- **Voice transcription** uses the browser's built-in speech recognition, which is Chrome-only. Recording still works everywhere.
+- **OCR** runs locally in the browser with Tesseract.js, so it is free but slower than a cloud OCR service.
+- **Google Calendar sync** is one-way from meow-study to Google.
+- **Rich text formatting** uses the browser's built-in `execCommand` API, which is dependable but older than a modern editor library.
