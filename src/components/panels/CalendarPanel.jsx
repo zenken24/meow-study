@@ -85,7 +85,6 @@ export default function CalendarPanel() {
   return (
     <section id="panel-calendar">
       <div className="panel-head">
-        <div className="eyebrow">05 — Plan</div>
         <h2>Calendar</h2>
         <div className="google-sync-badge">{googleConnected ? '\u2727 Synced with Google Calendar' : 'Sign in with Google to sync events automatically'}</div>
       </div>

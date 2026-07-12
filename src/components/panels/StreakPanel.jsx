@@ -111,7 +111,7 @@ export default function StreakPanel({ studyLog }) {
 
   return (
     <section id="panel-streak">
-      <div className="panel-head"><div className="eyebrow">06 — Momentum</div><h2>Streak</h2></div>
+      <div className="panel-head"><h2>Streak</h2></div>
 
       <div className="streak-top">
         <svg id="streak-flame" viewBox="0 0 24 24" fill="none" strokeWidth="1.3"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1 1 2 2.5 2 4.5A5.5 5.5 0 0 1 11.5 20 6 6 0 0 1 6 14c0-4 3-6 3-9 1 1 2 2 3-3z" /></svg>

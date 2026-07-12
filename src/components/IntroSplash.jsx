@@ -44,8 +44,8 @@ export default function IntroSplash() {
         </span>
       ))}
       <div className="intro-center">
-        <div className="intro-mark">meow-study</div>
-        <div className="intro-tagline">⋆ a cozy study corner ⋆</div>
+        <div className="intro-mark">meowstudy</div>
+        <div className="intro-tagline">⋆ the coziest study corner ever ⋆</div>
       </div>
       <div className="intro-skip">tap anywhere to continue</div>
     </div>

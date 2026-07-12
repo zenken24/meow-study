@@ -140,7 +140,7 @@ export default function TasksPanel() {
 
   return (
     <section id="panel-tasks">
-      <div className="panel-head"><div className="eyebrow">03 — Today</div><h2>Tasks</h2></div>
+      <div className="panel-head"><h2>Tasks</h2></div>
 
       <div className="add-row">
         <input id="task-text" type="text" placeholder="Add a task…" value={text}

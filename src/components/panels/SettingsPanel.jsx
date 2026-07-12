@@ -78,7 +78,7 @@ export default function SettingsPanel() {
 
   return (
     <section id="panel-settings">
-      <div className="panel-head"><div className="eyebrow">07 — You</div><h2>Settings</h2></div>
+      <div className="panel-head"><h2>Settings</h2></div>
 
       <div className="settings-group">
         <div className="settings-label">Profile</div>

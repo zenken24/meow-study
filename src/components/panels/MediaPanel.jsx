@@ -93,7 +93,7 @@ export default function MediaPanel({ savedState, onStateChange }) {
 
   return (
     <section id="panel-media">
-      <div className="panel-head"><div className="eyebrow">02 — Playing</div><h2>Media</h2></div>
+      <div className="panel-head"><h2>Now Playing</h2></div>
       <div className="url-row">
         <button className="nav-btn" onClick={goBack} disabled={historyIdx <= 0} title="Previous link">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>

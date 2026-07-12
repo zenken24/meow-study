@@ -33,7 +33,7 @@ export default function AuthGate() {
     return (
       <div id="auth-gate">
         <div id="auth-card">
-          <div className="mark">meow-study</div>
+          <div className="mark">meowstudy</div>
           <div className="tag">⋆ a cozy study corner ⋆</div>
           <div id="auth-setup-notice">
             This copy isn't connected to a database yet. Open <code>src/supabaseClient.js</code>,

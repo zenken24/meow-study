@@ -80,7 +80,7 @@ export default function SoundsPanel({ savedLevels, onLevelsChange, savedMixes, o
 
   return (
     <section id="panel-sounds">
-      <div className="panel-head"><div className="eyebrow">01 — Ambiance</div><h2>Soundboard</h2></div>
+      <div className="panel-head"><h2>Soundboard</h2></div>
 
       <div className="card master">
         <div className="slider-row">
@@ -100,7 +100,6 @@ export default function SoundsPanel({ savedLevels, onLevelsChange, savedMixes, o
             </div>
           ))}
         </div>
-        <div id="sound-hint">Real audio files, looped and mixed — add yours to <code>public/audio/soundtracks/</code>.</div>
       </div>
 
       <div className="card" style={{ padding: 16, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>

@@ -240,7 +240,7 @@ export default function NotesPanel() {
 
   return (
     <section id="panel-notes">
-      <div className="panel-head"><div className="eyebrow">04 — Margins</div><h2>Notes</h2></div>
+      <div className="panel-head"><h2>Notes</h2></div>
 
       <div className="notes-shell">
         <div className="notes-rail">

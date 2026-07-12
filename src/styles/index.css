@@ -116,7 +116,7 @@ h1,h2,h3{ margin:0; font-weight:400; }
 #tabstrip .spacer{ flex:1; }
 #streak-mini{ display:flex; align-items:center; gap:16px; padding:11px 16px; margin:1px 8px 6px; color:var(--text-dim); white-space:nowrap; }
 #streak-mini svg{ width:18px; height:18px; stroke:var(--text); flex:0 0 auto; }
-#streak-mini .n{ font-size:13.5px; opacity:0; transition:opacity .15s ease; }
+#streak-mini .n{ font-size:13.5px; font-weight:bold; opacity:0; transition:opacity .15s ease; }
 #tabstrip:hover #streak-mini .n{ opacity:1; }
 #user-badge{ font-size:9.5px; color:var(--text-faint); padding:8px 16px 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
@@ -124,7 +124,7 @@ h1,h2,h3{ margin:0; font-weight:400; }
 main#page{ flex:1; position:relative; overflow:hidden; padding:0 40px; display:flex; flex-direction:column; }
 
 #quote-bar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:22px 4px 16px; border-bottom:1px solid var(--line); flex:0 0 auto; }
-#quote-text{font-size:15.5px; color:var(--text-dim); line-height:1.5; }
+#quote-text{font-size:16px; color:var(--text-dim); line-height:1.5; }
 #quote-shuffle{ border:1px solid var(--line); background:transparent; color:var(--text-dim); cursor:pointer; width:30px; height:30px; border-radius:50%; flex:0 0 auto; opacity:0; transition:opacity .15s ease, background .15s ease; display:flex; align-items:center; justify-content:center; }
 #quote-bar:hover #quote-shuffle{ opacity:1; }
 #quote-shuffle:hover{ background:var(--hover); border-color:var(--line-strong); }
