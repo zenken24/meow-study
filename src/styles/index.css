@@ -1,3 +1,18 @@
+@font-face {
+  font-family: 'Aresto';
+  src: url('/fonts/aresto.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bonfield Script';
+  src: url('/fonts/bonfield.script.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root{
   --pink:#FF1493;
   --pink-text:#000000;
@@ -35,11 +50,18 @@
 *{ box-sizing:border-box; }
 html,body,#root{ height:100%; margin:0; }
 body{
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Aresto', Georgia, 'Times New Roman', serif;
   background:var(--bg);
   color:var(--text);
   overflow:hidden;
   transition:background .2s ease, color .2s ease;
+  h1, h2, h3,
+  .mark,
+  #note-title,
+  #quote-text,
+  .intro-mark {
+    font-family: 'Bonfield Script', Georgia, serif;
+  }
 }
 ::selection{ background:var(--pink); color:var(--pink-text); }
 button, input, textarea, select{ font-family:inherit; color:inherit; }
