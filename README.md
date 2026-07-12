@@ -1,6 +1,6 @@
 # meow-study  (≧◡≦)
 
-> A tiny cozy study nook for notes, tasks, soundscapes, Pomodoro purrs, streaks, and calendar magic (｡•̀ᴗ-)✧
+A tiny cozy study nook for notes, tasks, soundscapes, Pomodoro purrs, streaks, and calendar magic (｡•̀ᴗ-)✧
 
 **Live app:** [Open the cute little meow-study app on Netlify](https://meow-study.netlify.app)
 
@@ -33,9 +33,8 @@ Connect Supabase in `src/supabaseClient.js` by filling in `SUPABASE_URL` and `SU
 
 Run the database schema by opening the SQL Editor, creating a new query, pasting all of `schema.sql`, and running it. It is safe to re-run on older versions. The schema adds task columns, subtasks, due dates, folders, expanded note fields, labels, reminders, voice/image/drawing support, session history, badges, calendar metadata, sound mix settings, and the `notes-media` bucket.
 
-See `public/ADD_YOUR_FILES_HERE.txt` for the exact filenames and folders you need to add. It lists the required images, ambiance tracks, and Pomodoro sound effects, including the filenames that need a quick rename.
 
-## Optional Google Calendar Sparkle Sync (｡•̀ᴗ-)✧
+## Google Calendar Sparkle Sync (｡•̀ᴗ-)✧
 
 meow-study can reuse your existing Google sign-in for calendar sync. No new Google Cloud project is required.
 
