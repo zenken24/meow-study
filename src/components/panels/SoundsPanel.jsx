@@ -80,7 +80,7 @@ export default function SoundsPanel({ savedLevels, onLevelsChange, savedMixes, o
 
   return (
     <section id="panel-sounds">
-      <div className="panel-head"><h2>Soundboard</h2></div>
+      <div className="panel-head"><h2>Mix 'em sounds</h2></div>
 
       <div className="card master">
         <div className="slider-row">

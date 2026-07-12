@@ -165,7 +165,7 @@ export default function TimerFloat({ config, onConfigChange, onFocusSessionCompl
       onPointerDown={() => bringToFront('timer')}
     >
       <div id="timer-drag" ref={headRef}>
-        <div id="timer-grip"><span /><span /><span /><span /><span /><span /></div>
+        <div id="timer-grip"><span /><span /><span /></div>
         <div id="timer-modes">
           <button className={'mode-btn' + (mode === 'focus' ? ' active' : '')} data-no-drag onClick={() => switchMode('focus')}>Focus</button>
           <button className={'mode-btn' + (mode === 'short' ? ' active' : '')} data-no-drag onClick={() => switchMode('short')}>Short</button>
@@ -191,7 +191,7 @@ export default function TimerFloat({ config, onConfigChange, onFocusSessionCompl
             <div id="ring-time">{pad(mm)}:{pad(ss)}</div>
           </div>
 
-          <select data-no-drag className="task-picker" value={selectedTaskId} onChange={(e) => pickTask(e.target.value)}>
+          <select data-no-drag className="task-picker" value={selectedTaskId} onChange={(e) => pickTask(e.target.value)} onFocus={loadOpenTasks}>
             <option value="">Working on…</option>
             {openTasks.map((t) => <option key={t.id} value={t.id}>{t.text}</option>)}
           </select>

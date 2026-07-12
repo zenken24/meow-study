@@ -89,8 +89,6 @@ function Workspace() {
       const { data: log } = await supabase.from('study_log').select('date,minutes').eq('user_id', u).order('date', { ascending: false }).limit(400)
       if (cancelled) return
       setStudyLog(log || [])
-
-      openWindow('sounds')
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps

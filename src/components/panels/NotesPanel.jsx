@@ -240,7 +240,7 @@ export default function NotesPanel() {
 
   return (
     <section id="panel-notes">
-      <div className="panel-head"><h2>Notes</h2></div>
+      <div className="panel-head"><h2>Write it down</h2></div>
 
       <div className="notes-shell">
         <div className="notes-rail">
@@ -385,7 +385,7 @@ export default function NotesPanel() {
                       ))}
                     </div>
                   )}
-                  <div className="word-count">{current.body ? current.body.trim().split(/\s+/).filter(Boolean).length : 0} words \u00b7 {current.body.length} chars</div>
+                  <div className="word-count">{current.body ? current.body.trim().split(/\s+/).filter(Boolean).length : 0} words {current.body.length} chars</div>
                 </>
               )}
 
