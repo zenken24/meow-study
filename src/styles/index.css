@@ -235,3 +235,50 @@ input[type="range"]::-moz-range-thumb{ width:14px; height:14px; border-radius:50
   #timer-float{ width:200px; }
   .win{ width:calc(100vw - 24px) !important; max-height:70vh; left:12px !important; }
 }
+
+
+/* ================= intro splash ================= */
+.intro-splash{
+  position:fixed; inset:0; z-index:500; background:#000;
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  cursor:pointer; overflow:hidden; opacity:1; transition:opacity .45s ease;
+}
+.intro-splash.leaving{ opacity:0; }
+.intro-glow{
+  position:absolute; width:520px; height:520px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,20,147,.28) 0%, rgba(255,20,147,0) 70%);
+  animation:intro-pulse 2.6s ease-in-out infinite;
+}
+@keyframes intro-pulse{
+  0%,100%{ transform:scale(.92); opacity:.7; }
+  50%{ transform:scale(1.08); opacity:1; }
+}
+.intro-star{
+  position:absolute; color:#FF1493; opacity:0;
+  animation:intro-twinkle 1.8s ease-in-out infinite;
+}
+@keyframes intro-twinkle{
+  0%,100%{ opacity:0; transform:scale(.6) rotate(0deg); }
+  50%{ opacity:1; transform:scale(1.15) rotate(15deg); }
+}
+.intro-center{ position:relative; text-align:center; animation:intro-rise .9s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes intro-rise{
+  from{ opacity:0; transform:translateY(14px) scale(.9); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+.intro-mark{
+  font-family:Georgia, 'Times New Roman', serif; font-size:52px; color:#FF1493;
+  text-shadow:0 0 30px rgba(255,20,147,.5); letter-spacing:.01em;
+}
+.intro-tagline{
+  font-family:Georgia, serif; font-style:italic; font-size:14px; color:rgba(255,20,147,.65);
+  margin-top:10px; opacity:0; animation:intro-fade-in .8s ease .5s both;
+}
+@keyframes intro-fade-in{ from{ opacity:0; } to{ opacity:1; } }
+.intro-skip{
+  position:absolute; bottom:34px; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:rgba(255,20,147,.35); opacity:0; animation:intro-fade-in .8s ease 1.4s both;
+}
+@media (prefers-reduced-motion: reduce){
+  .intro-glow, .intro-star{ animation:none; opacity:.6; }
+}

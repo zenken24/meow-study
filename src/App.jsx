@@ -5,6 +5,7 @@ import { useNotify } from './context/NotificationContext.jsx'
 import { supabase, CONFIGURED } from './supabaseClient.js'
 import { todayIsoLocal } from './lib/utils.js'
 
+import IntroSplash from './components/IntroSplash.jsx'
 import AuthGate from './components/AuthGate.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import QuoteBar from './components/QuoteBar.jsx'
@@ -25,24 +26,30 @@ export default function App() {
   const { session, ready } = useAuth()
   const { backgroundImage } = useTheme()
 
-  if (!CONFIGURED) return <AuthGate />
-  if (!ready) return <div className="boot-screen">Loading…</div>
-  if (!session) return <AuthGate />
-
   return (
     <>
-      {backgroundImage && (
-        <div
-          className="app-bg"
-          style={{ backgroundImage: `url(${backgroundImage})` }}
-          onError={() => {}}
-        />
+      <IntroSplash />
+      {!CONFIGURED ? (
+        <AuthGate />
+      ) : !ready ? (
+        <div className="boot-screen">Loading…</div>
+      ) : !session ? (
+        <AuthGate />
+      ) : (
+        <>
+          {backgroundImage && (
+            <div
+              className="app-bg"
+              style={{ backgroundImage: `url(${backgroundImage})` }}
+              onError={() => {}}
+            />
+          )}
+          <Workspace />
+        </>
       )}
-      <Workspace />
     </>
   )
 }
-
 function Workspace() {
   const { session } = useAuth()
   const { notify } = useNotify()
