@@ -23,7 +23,7 @@ export async function createGoogleCalendarEvent(accessToken, { title, date, time
         end: { date }
       }
 
-  const res = await fetch('https://www.googleapis.com/calendar/v3/events', {
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
