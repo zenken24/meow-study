@@ -25,7 +25,7 @@
   --surface-2:#161616;
   --line: rgba(255,20,147,.25);
   --line-strong: rgba(255,20,147,.5);
-  --text:#FF1493;
+  --text:#ffb8de;
   --text-dim: rgba(255,20,147,.68);
   --text-faint: rgba(255,20,147,.4);
   --hover: rgba(255,20,147,.10);
@@ -39,7 +39,7 @@
   --surface-2:#FFE6F1;
   --line: rgba(194,24,91,.22);
   --line-strong: rgba(194,24,91,.42);
-  --text:#C2185B;
+  --text:#500b26;
   --text-dim: rgba(194,24,91,.72);
   --text-faint: rgba(194,24,91,.45);
   --hover: rgba(194,24,91,.08);
