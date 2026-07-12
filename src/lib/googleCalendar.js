@@ -9,12 +9,13 @@ export async function createGoogleCalendarEvent(accessToken, { title, date, time
   if (!accessToken) return { skipped: true }
 
   const startDateTime = time ? `${date}T${time}:00` : undefined
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const body = startDateTime
     ? {
         summary: title,
         description: category ? `Category: ${category}` : undefined,
-        start: { dateTime: startDateTime },
-        end: { dateTime: addOneHour(startDateTime) }
+        start: { dateTime: startDateTime, timeZone },
+        end: { dateTime: addOneHour(startDateTime), timeZone }
       }
     : {
         summary: title,
@@ -43,7 +44,8 @@ export async function createGoogleCalendarEvent(accessToken, { title, date, time
 function addOneHour(isoLocal) {
   const d = new Date(isoLocal)
   d.setHours(d.getHours() + 1)
-  return d.toISOString().slice(0, 19)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 export async function listGoogleCalendarEvents(accessToken, timeMinISO, timeMaxISO) {
