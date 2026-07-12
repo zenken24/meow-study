@@ -5,6 +5,7 @@ import { useNotify } from './context/NotificationContext.jsx'
 import { supabase, CONFIGURED } from './supabaseClient.js'
 import { todayIsoLocal } from './lib/utils.js'
 
+import ProfileBadge from './components/ProfileBadge.jsx'
 import IntroSplash from './components/IntroSplash.jsx'
 import AuthGate from './components/AuthGate.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -121,6 +122,7 @@ function Workspace() {
 
   return (
     <div id="app">
+      <ProfileBadge />
       <Sidebar streakCount={streakCount} />
 
       <main id="page">

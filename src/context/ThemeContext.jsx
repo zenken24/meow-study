@@ -7,18 +7,19 @@ const ThemeContext = createContext(null)
 export function ThemeProvider({ children }) {
   const { session } = useAuth()
   const [theme, setThemeState] = useState('dark')
-  const [backgroundMode, setBackgroundModeState] = useState('default') // 'default' | 'custom' | 'none'
+  const [backgroundMode, setBackgroundModeState] = useState('default')
   const [customBackgroundUrl, setCustomBackgroundUrlState] = useState(null)
+  const [username, setUsernameState] = useState('')
+  const [avatarUrl, setAvatarUrlState] = useState(null)
   const [loaded, setLoaded] = useState(false)
 
-  // Load saved prefs once we have a session
   useEffect(() => {
     if (!session || !CONFIGURED) return
     let cancelled = false
     ;(async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('theme, background_mode, custom_background_url')
+        .select('theme, background_mode, custom_background_url, username, avatar_url')
         .eq('user_id', session.user.id)
         .maybeSingle()
       if (cancelled) return
@@ -26,7 +27,38 @@ export function ThemeProvider({ children }) {
         if (data.theme) setThemeState(data.theme)
         if (data.background_mode) setBackgroundModeState(data.background_mode)
         if (data.custom_background_url) setCustomBackgroundUrlState(data.custom_background_url)
+        setUsernameState(data.username || '')
+        setAvatarUrlState(data.avatar_url || null)
       }
+
+      const pendingRaw = sessionStorage.getItem('pending_profile')
+      if (pendingRaw) {
+        sessionStorage.removeItem('pending_profile')
+        try {
+          const pending = JSON.parse(pendingRaw)
+          let avatarUrlToSave = data?.avatar_url || null
+          if (pending.avatarDataUrl) {
+            const blob = await (await fetch(pending.avatarDataUrl)).blob()
+            const path = `${session.user.id}/avatar-${Date.now()}.png`
+            const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true })
+            if (!upErr) {
+              const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+              avatarUrlToSave = pub.publicUrl
+            }
+          }
+          const usernameToSave = pending.username || data?.username || ''
+          await supabase.from('profiles').upsert(
+            { user_id: session.user.id, username: usernameToSave, avatar_url: avatarUrlToSave, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' }
+          )
+          if (cancelled) return
+          setUsernameState(usernameToSave)
+          setAvatarUrlState(avatarUrlToSave)
+        } catch {
+          // malformed/missing pending profile — ignore
+        }
+      }
+
       setLoaded(true)
     })()
     return () => { cancelled = true }
@@ -60,6 +92,16 @@ export function ThemeProvider({ children }) {
     setBackgroundModeState('custom')
   }, [persist])
 
+  const setUsername = useCallback((u) => {
+    setUsernameState(u)
+    persist({ username: u })
+  }, [persist])
+
+  const setAvatarUrl = useCallback((url) => {
+    setAvatarUrlState(url)
+    persist({ avatar_url: url })
+  }, [persist])
+
   const backgroundImage =
     backgroundMode === 'none'
       ? null
@@ -71,7 +113,10 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, setTheme, backgroundMode, setBackgroundMode, customBackgroundUrl, setCustomBackgroundUrl, backgroundImage, loaded }}
+      value={{
+        theme, setTheme, backgroundMode, setBackgroundMode, customBackgroundUrl, setCustomBackgroundUrl,
+        backgroundImage, loaded, username, setUsername, avatarUrl, setAvatarUrl
+      }}
     >
       {children}
     </ThemeContext.Provider>

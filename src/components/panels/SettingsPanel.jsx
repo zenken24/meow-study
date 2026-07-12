@@ -6,31 +6,20 @@ import { useNotify } from '../../context/NotificationContext.jsx'
 
 export default function SettingsPanel() {
   const { session } = useAuth()
-  const { theme, setTheme, backgroundMode, setBackgroundMode, setCustomBackgroundUrl } = useTheme()
+  const { theme, setTheme, backgroundMode, setBackgroundMode, setCustomBackgroundUrl, username, setUsername, avatarUrl, setAvatarUrl } = useTheme()
   const { notify } = useNotify()
 
-  const [username, setUsername] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [usernameDraft, setUsernameDraft] = useState(username)
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const fileInputRef = useRef(null)
   const bgInputRef = useRef(null)
 
-  useEffect(() => { loadProfile() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setUsernameDraft(username) }, [username])
 
-  async function loadProfile() {
-    const { data } = await supabase.from('profiles').select('username, avatar_url').eq('user_id', session.user.id).maybeSingle()
-    if (data) {
-      setUsername(data.username || '')
-      setAvatarUrl(data.avatar_url || null)
-    }
-  }
-
-  async function saveUsername() {
-    await supabase.from('profiles').upsert(
-      { user_id: session.user.id, username, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    )
+  function saveUsername() {
+    if (!usernameDraft.trim()) return
+    setUsername(usernameDraft.trim())
     notify('Username saved \u2727')
   }
 
@@ -42,10 +31,6 @@ export default function SettingsPanel() {
     if (error) { notify('Couldn\u2019t upload that image.'); return }
     const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
     setAvatarUrl(pub.publicUrl)
-    await supabase.from('profiles').upsert(
-      { user_id: session.user.id, avatar_url: pub.publicUrl, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    )
     notify('Profile picture updated \u2727')
   }
 
@@ -90,7 +75,7 @@ export default function SettingsPanel() {
           <div className="settings-field">
             <label>Username</label>
             <div className="settings-inline">
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="your username" />
+              <input type="text" value={usernameDraft} onChange={(e) => setUsernameDraft(e.target.value)} placeholder="your username" />
               <button className="btn ghost" onClick={saveUsername}>Save</button>
             </div>
           </div>

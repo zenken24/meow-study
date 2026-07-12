@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNotify } from '../../context/NotificationContext.jsx'
 import { todayIsoLocal } from '../../lib/utils.js'
+import { useWindows } from '../../context/WindowsContext.jsx'
 
 const PRIO_RANK = { high: 0, medium: 1, low: 2 }
 const PRIO_MARK = { high: '\u25CF', medium: '\u25D0', low: '\u25CB' }
@@ -15,6 +16,7 @@ const COLUMNS = [
 export default function TasksPanel() {
   const { session } = useAuth()
   const { notify, confirmDialog } = useNotify()
+  const { zMap } = useWindows()
   const [tasks, setTasks] = useState([])
   const [text, setText] = useState('')
   const [project, setProject] = useState('')
@@ -23,7 +25,7 @@ export default function TasksPanel() {
   const [expanded, setExpanded] = useState({}) // taskId -> bool (subtasks open)
 
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
+  useEffect(() => { if (zMap.tasks) load() }, [zMap.tasks]) // eslint-disable-line react-hooks/exhaustive-deps
   async function load() {
     const { data, error } = await supabase.from('tasks').select('*').eq('user_id', session.user.id).order('created_at')
     if (error) { notify('Couldn\u2019t load tasks.'); return }
@@ -140,7 +142,7 @@ export default function TasksPanel() {
 
   return (
     <section id="panel-tasks">
-      <div className="panel-head"><h2>Tasks</h2></div>
+      <div className="panel-head"><h2>Things you gotta do</h2></div>
 
       <div className="add-row">
         <input id="task-text" type="text" placeholder="Add a task…" value={text}

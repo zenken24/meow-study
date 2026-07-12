@@ -6,22 +6,27 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [ready, setReady] = useState(false)
-
   useEffect(() => {
-    if (!CONFIGURED) { setReady(true); return }
+      if (!CONFIGURED) { setReady(true); return }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session || null)
-      setReady(true)
-    })
+      supabase.auth.getSession().then(({ data }) => {
+        setSession(data.session || null)
+        setReady(true)
+        if (data.session?.provider_token) {
+          sessionStorage.setItem('google_provider_token', data.session.provider_token)
+        }
+      })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s)
-      setReady(true)
-    })
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+        setSession(s)
+        setReady(true)
+        if (s?.provider_token) {
+          sessionStorage.setItem('google_provider_token', s.provider_token)
+        }
+      })
 
-    return () => sub.subscription.unsubscribe()
-  }, [])
+      return () => sub.subscription.unsubscribe()
+    }, [])
 
   async function signInWithPassword(email, password) {
     return supabase.auth.signInWithPassword({ email, password })
@@ -43,16 +48,22 @@ export function AuthProvider({ children }) {
     })
   }
   async function signOut() {
+    sessionStorage.removeItem('google_provider_token')
     await supabase.auth.signOut()
+  }
+
+  function getGoogleToken() {
+    return sessionStorage.getItem('google_provider_token') || session?.provider_token || null
   }
 
   return (
     <AuthContext.Provider
-      value={{ session, ready, signInWithPassword, signUp, signInWithMagicLink, signInWithGoogle, signOut }}
+      value={{ session, ready, signInWithPassword, signUp, signInWithMagicLink, signInWithGoogle, signOut, getGoogleToken }}
     >
       {children}
     </AuthContext.Provider>
   )
+
 }
 
 export function useAuth() {

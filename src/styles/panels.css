@@ -139,7 +139,9 @@
 
 /* ---------- calendar ---------- */
 #cal-toolbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-.google-sync-badge{ font-size:11px; color:var(--text-faint); margin-top:6px; font-style:italic; }
+.google-sync-row{ display:flex; align-items:center; gap:10px; margin-top:6px; }
+.google-sync-badge{ font-size:11px; color:var(--text-faint); font-style:italic; }
+.dot-google{ outline:1px solid var(--text-dim); outline-offset:1px; }
 .event-add-row select{ padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); outline:none; font-size:12.5px; color:var(--text); }
 .event-color-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
 .event-cat{ color:var(--text-faint); font-size:11px; }
@@ -161,7 +163,8 @@
 .cal-cell .dots span{ width:5px; height:5px; border-radius:50%; background:var(--pink); }
 #cal-day-panel{ padding:16px 18px; }
 #cal-day-title{ font-size:15px; margin-bottom:12px; }
-.event-add-row{ display:flex; gap:8px; margin-bottom:14px; }
+.event-add-row{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.event-add-row input[type="text"]{ flex:1 1 140px; min-width:0; }
 .event-add-row input[type="text"]{ flex:1; padding:9px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface); outline:none; font-size:13.5px; color:var(--text); }
 .event-add-row input[type="time"]{ padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); outline:none; font-size:13.5px; color:var(--text); }
 #event-list{ display:flex; flex-direction:column; gap:8px; }
@@ -179,7 +182,7 @@
 #streak-number{ font-size:44px; line-height:1; }
 #streak-label{ font-size:12.5px; color:var(--text-faint); margin-top:2px; }
 #streak-today{ font-size:13px; color:var(--text-dim); margin-left:auto; }
-#streak-motivate{ font-size:13px; color:var(--text-dim); font-style:italic; margin-bottom:20px; }
+#streak-motivate{ font-size:19px; color:var(--pink); font-weight:bold; font-style:italic; margin-bottom:22px; text-shadow:0 0 18px rgba(255,20,147,.25); }
 .recap-line{ font-size:14px; color:var(--text-dim); line-height:1.6; }
 .recap-line strong{ color:var(--text); }
 .badge-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; }

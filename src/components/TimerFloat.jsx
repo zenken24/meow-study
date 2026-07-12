@@ -220,7 +220,7 @@ export default function TimerFloat({ config, onConfigChange, onFocusSessionCompl
         </div>
       )}
 
-      {settingsOpen && (
+      {settingsOpen && !collapsed && (
         <div id="timer-settings" className="open">
           <div className="setting-row">Focus (min) <input type="number" defaultValue={config.focus} onBlur={(e) => saveCfg('focus', e.target.value)} /></div>
           <div className="setting-row">Short break <input type="number" defaultValue={config.short} onBlur={(e) => saveCfg('short', e.target.value)} /></div>

@@ -45,3 +45,38 @@ function addOneHour(isoLocal) {
   d.setHours(d.getHours() + 1)
   return d.toISOString().slice(0, 19)
 }
+
+export async function listGoogleCalendarEvents(accessToken, timeMinISO, timeMaxISO) {
+  if (!accessToken) return { events: [] }
+
+  const params = new URLSearchParams({
+    timeMin: timeMinISO,
+    timeMax: timeMaxISO,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '250'
+  })
+
+  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+
+  if (!res.ok) {
+    if (res.status === 401) return { events: [], expired: true }
+    return { events: [], error: true }
+  }
+
+  const data = await res.json()
+  const events = (data.items || []).map((ev) => {
+    const start = ev.start?.dateTime || ev.start?.date
+    const isAllDay = !ev.start?.dateTime
+    return {
+      id: ev.id,
+      title: ev.summary || '(untitled)',
+      date: isAllDay ? start : start.slice(0, 10),
+      time: isAllDay ? '' : start.slice(11, 16),
+      source: 'google'
+    }
+  })
+  return { events }
+}

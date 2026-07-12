@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNotify } from '../../context/NotificationContext.jsx'
 import { isoDate } from '../../lib/utils.js'
-import { createGoogleCalendarEvent } from '../../lib/googleCalendar.js'
+import { createGoogleCalendarEvent, listGoogleCalendarEvents } from '../../lib/googleCalendar.js'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DOW = ['S','M','T','W','T','F','S']
@@ -12,9 +12,11 @@ const CATEGORY_COLORS = {
 }
 
 export default function CalendarPanel() {
-  const { session } = useAuth()
+  const { session, getGoogleToken, signInWithGoogle } = useAuth()
   const { notify } = useNotify()
   const [events, setEvents] = useState([])
+  const [googleEvents, setGoogleEvents] = useState([])
+  const [googleStatus, setGoogleStatus] = useState('checking')
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
@@ -23,14 +25,28 @@ export default function CalendarPanel() {
   const [evTime, setEvTime] = useState('09:00')
   const [evCategory, setEvCategory] = useState('')
 
-  const googleConnected = !!session?.provider_token
-
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadGoogleEvents() }, [viewYear, viewMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load() {
     const { data, error } = await supabase.from('calendar_events').select('*').eq('user_id', session.user.id)
     if (error) { notify('Couldn\u2019t load calendar events.'); return }
     setEvents(data)
+  }
+
+  async function loadGoogleEvents() {
+    const token = getGoogleToken()
+    if (!token) { setGoogleStatus('off'); setGoogleEvents([]); return }
+    const monthStart = new Date(viewYear, viewMonth, 1)
+    const monthEnd = new Date(viewYear, viewMonth + 1, 0, 23, 59, 59)
+    const { events: gEvents, expired } = await listGoogleCalendarEvents(token, monthStart.toISOString(), monthEnd.toISOString())
+    if (expired) { setGoogleStatus('expired'); setGoogleEvents([]); return }
+    setGoogleStatus('connected')
+    setGoogleEvents(gEvents)
+  }
+
+  async function connectGoogle() {
+    await signInWithGoogle()
   }
 
   async function addEvent() {
@@ -44,14 +60,18 @@ export default function CalendarPanel() {
     if (error) { notify('Couldn\u2019t save that event.'); return }
     setEvents((es) => [...es, data])
 
-    if (googleConnected) {
-      const result = await createGoogleCalendarEvent(session.provider_token, { title: t, date: selectedDate, time: evTime, category: evCategory })
+    const token = getGoogleToken()
+    if (token) {
+      const result = await createGoogleCalendarEvent(token, { title: t, date: selectedDate, time: evTime, category: evCategory })
       if (result.id) {
         await supabase.from('calendar_events').update({ google_event_id: result.id }).eq('id', data.id)
         notify('Added \u2014 synced to Google Calendar too \u2727')
+        loadGoogleEvents()
       } else if (result.error) {
-        notify('Saved here, but Google Calendar sync failed.')
+        notify('Saved here, but Google Calendar sync failed \u2014 try reconnecting Google.')
       }
+    } else {
+      notify('Saved here. Connect Google Calendar above to also sync new events there.')
     }
   }
 
@@ -79,14 +99,32 @@ export default function CalendarPanel() {
   function goNext() { let m = viewMonth + 1, y = viewYear; if (m > 11) { m = 0; y++ } setViewMonth(m); setViewYear(y) }
   function goToday() { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); setSelectedDate(todayIso) }
 
-  const dayEvents = events.filter((e) => e.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+  const allEventsForDate = (iso) => [
+    ...events.filter((e) => e.date === iso),
+    ...googleEvents.filter((e) => e.date === iso)
+  ]
+  const dayEvents = allEventsForDate(selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''))
   const selectedDateObj = new Date(selectedDate + 'T00:00:00')
+
+  const statusLine = {
+    checking: 'Checking Google Calendar connection\u2026',
+    connected: '\u2727 Synced with Google Calendar',
+    expired: 'Google Calendar connection expired',
+    off: 'Not connected to Google Calendar'
+  }[googleStatus]
 
   return (
     <section id="panel-calendar">
       <div className="panel-head">
-        <h2>Calendar</h2>
-        <div className="google-sync-badge">{googleConnected ? '\u2727 Synced with Google Calendar' : 'Sign in with Google to sync events automatically'}</div>
+        <h2>Your Calendar</h2>
+        <div className="google-sync-row">
+          <div className="google-sync-badge">{statusLine}</div>
+          {(googleStatus === 'off' || googleStatus === 'expired') && (
+            <button className="chip small" onClick={connectGoogle}>
+              {googleStatus === 'expired' ? 'Reconnect Google' : 'Connect Google Calendar'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div id="cal-toolbar">
@@ -102,7 +140,7 @@ export default function CalendarPanel() {
         {DOW.map((d, i) => <div className="cal-dow" key={i}>{d}</div>)}
         {cells.map((c, i) => {
           const iso = isoDate(c.y, c.m, c.day)
-          const dayEvts = events.filter((e) => e.date === iso)
+          const dayEvts = allEventsForDate(iso)
           return (
             <div
               key={i}
@@ -110,7 +148,11 @@ export default function CalendarPanel() {
               onClick={() => setSelectedDate(iso)}
             >
               <div className="daynum">{c.day}</div>
-              <div className="dots">{dayEvts.slice(0, 4).map((e, j) => <span key={j} style={{ background: e.color || 'var(--pink)' }} />)}</div>
+              <div className="dots">
+                {dayEvts.slice(0, 4).map((e, j) => (
+                  <span key={j} className={e.source === 'google' ? 'dot-google' : ''} style={{ background: e.color || 'var(--pink)' }} />
+                ))}
+              </div>
             </div>
           )
         })}
@@ -133,10 +175,12 @@ export default function CalendarPanel() {
               <span className="event-color-dot" style={{ background: e.color || 'var(--pink)' }} />
               <div className="time">{e.time || ''}</div>
               <div className="title">{e.title}{e.category && <span className="event-cat"> \u00b7 {e.category}</span>}</div>
-              {e.google_event_id && <span className="event-synced" title="Synced to Google Calendar">G</span>}
-              <button className="del" onClick={() => deleteEvent(e.id)}>
-                <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
+              {(e.google_event_id || e.source === 'google') && <span className="event-synced" title="From Google Calendar">G</span>}
+              {e.source !== 'google' && (
+                <button className="del" onClick={() => deleteEvent(e.id)}>
+                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              )}
             </div>
           ))}
         </div>
