@@ -124,9 +124,7 @@ h1,h2,h3{ margin:0; font-weight:400; }
 main#page{ flex:1; position:relative; overflow:hidden; padding:0 40px; display:flex; flex-direction:column; }
 
 #quote-bar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:22px 4px 16px; border-bottom:1px solid var(--line); flex:0 0 auto; }
-#quote-text{ font-style:italic; font-size:15.5px; color:var(--text-dim); line-height:1.5; }
-#quote-text::before{ content:'\2726  '; }
-#quote-text::after{ content:'  \2726'; }
+#quote-text{font-size:15.5px; color:var(--text-dim); line-height:1.5; }
 #quote-shuffle{ border:1px solid var(--line); background:transparent; color:var(--text-dim); cursor:pointer; width:30px; height:30px; border-radius:50%; flex:0 0 auto; opacity:0; transition:opacity .15s ease, background .15s ease; display:flex; align-items:center; justify-content:center; }
 #quote-bar:hover #quote-shuffle{ opacity:1; }
 #quote-shuffle:hover{ background:var(--hover); border-color:var(--line-strong); }
