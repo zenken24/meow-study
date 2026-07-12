@@ -1,20 +1,20 @@
 # meow-study
 
-> A cozy study desk with accounts, notes, tasks, soundscapes, Pomodoro flow, streaks, and calendar sync.
+> A tiny cozy study nook for notes, tasks, soundscapes, Pomodoro purrs, streaks, and calendar magic.
 
-**Live app:** [Open meow-study on Netlify](https://meow-study.netlify.app)
+**Live app:** [Open the cute little meow-study app on Netlify](https://meow-study.netlify.app)
 
-## Welcome
+## Hello There
 
-meow-study is a focused productivity space built to feel calm, tactile, and useful. It combines study tools, a soundboard, note capture, task tracking, and gentle progress feedback in one place.
+meow-study is a soft little productivity space built to feel calm, playful, and useful. It bundles study tools, a soundboard, note capture, task tracking, and gentle progress feedback in one sweet place.
 
-## Try It
+## Try the App
 
-You can use the app right now here:
+You can jump in right here:
 
 [Launch meow-study](https://meow-study.netlify.app)
 
-## Quick Start
+## Tiny Quick Start
 
 1. Open the live app or run it locally.
 2. Sign in and connect your Supabase project.
@@ -35,7 +35,7 @@ Run the database schema by opening the SQL Editor, creating a new query, pasting
 
 See `public/ADD_YOUR_FILES_HERE.txt` for the exact filenames and folders you need to add. It lists the required images, ambiance tracks, and Pomodoro sound effects, including the filenames that need a quick rename.
 
-## Optional Google Calendar Sync
+## Optional Google Calendar Sparkle Sync
 
 meow-study can reuse your existing Google sign-in for calendar sync. No new Google Cloud project is required.
 
