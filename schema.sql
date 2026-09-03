@@ -113,6 +113,8 @@ alter table public.calendar_events add column if not exists category text defaul
 alter table public.calendar_events add column if not exists color text default '';
 alter table public.calendar_events add column if not exists google_event_id text;
 alter table public.calendar_events add column if not exists created_at timestamptz not null default now();
+alter table public.calendar_events add column if not exists note_id uuid references public.notes(id) on delete cascade;
+create unique index if not exists calendar_events_note_id_key on public.calendar_events(note_id) where note_id is not null;
 alter table public.calendar_events enable row level security;
 drop policy if exists "own events" on public.calendar_events;
 create policy "own events" on public.calendar_events

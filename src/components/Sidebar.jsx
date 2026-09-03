@@ -36,6 +36,7 @@ export default function Sidebar({ streakCount }) {
   return (
     <nav id="tabstrip">
       <div className="brand">
+        <img className="brand-icon" src="/icon.jpeg" alt="" />
         <div className="mark">meowstudy</div>
       </div>
 

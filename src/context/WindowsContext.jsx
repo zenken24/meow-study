@@ -7,6 +7,12 @@ const PANEL_ORDER = ['sounds', 'media', 'tasks', 'notes', 'calendar', 'streak', 
 export function WindowsProvider({ children }) {
   const [openMap, setOpenMap] = useState({})
   const [zMap, setZMap] = useState({})
+  // Bumped whenever something outside the Tasks panel itself (the Pomodoro
+  // timer marking a task in-progress/complete, logging tracked minutes)
+  // changes task data, so the Tasks panel can pick up the change immediately
+  // instead of waiting for its own reload triggers.
+  const [tasksVersion, setTasksVersion] = useState(0)
+  const bumpTasks = useCallback(() => setTasksVersion((v) => v + 1), [])
   const zTop = useRef(50)
   const cascadeIndex = useRef(0)
   const placedRef = useRef({}) // panel -> {left, top} already assigned this session
@@ -42,7 +48,7 @@ export function WindowsProvider({ children }) {
 
   return (
     <WindowsContext.Provider
-      value={{ openMap, zMap, openWindow, closeWindow, toggleWindow, bringToFront, getInitialPosition, PANEL_ORDER }}
+      value={{ openMap, zMap, openWindow, closeWindow, toggleWindow, bringToFront, getInitialPosition, PANEL_ORDER, tasksVersion, bumpTasks }}
     >
       {children}
     </WindowsContext.Provider>

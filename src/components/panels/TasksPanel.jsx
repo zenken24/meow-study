@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../supabaseClient.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNotify } from '../../context/NotificationContext.jsx'
@@ -6,42 +6,51 @@ import { todayIsoLocal } from '../../lib/utils.js'
 import { useWindows } from '../../context/WindowsContext.jsx'
 
 const PRIO_RANK = { high: 0, medium: 1, low: 2 }
-const PRIO_MARK = { high: '\u25CF', medium: '\u25D0', low: '\u25CB' }
-const COLUMNS = [
+const PRIO_MARK = { high: '●', medium: '◐', low: '○' }
+const STATUSES = [
   { status: 'todo', label: 'Todo' },
   { status: 'in_progress', label: 'In Progress' },
   { status: 'completed', label: 'Completed' }
 ]
+const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.status, s.label]))
+const NO_WORK = 'No work'
+function dueRank(t) { return t.due_date ? new Date(t.due_date).getTime() : Infinity }
+function byPriorityAndDeadline(a, b) {
+  return PRIO_RANK[a.priority] - PRIO_RANK[b.priority] ||
+    dueRank(a) - dueRank(b) ||
+    new Date(a.created_at) - new Date(b.created_at)
+}
 
 export default function TasksPanel() {
   const { session } = useAuth()
   const { notify, confirmDialog } = useNotify()
-  const { zMap } = useWindows()
+  const { zMap, tasksVersion } = useWindows()
   const [tasks, setTasks] = useState([])
   const [text, setText] = useState('')
-  const [project, setProject] = useState('')
+  const [work, setWork] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [priority, setPriority] = useState('medium')
-  const [expanded, setExpanded] = useState({}) // taskId -> bool (subtasks open)
+  const [tagFilter, setTagFilter] = useState(null)
 
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (zMap.tasks) load() }, [zMap.tasks]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tasksVersion) load() }, [tasksVersion]) // eslint-disable-line react-hooks/exhaustive-deps
   async function load() {
     const { data, error } = await supabase.from('tasks').select('*').eq('user_id', session.user.id).order('created_at')
-    if (error) { notify('Couldn\u2019t load tasks.'); return }
+    if (error) { notify('Couldn’t load tasks.'); return }
     setTasks(data)
   }
 
   async function addTask() {
     const t = text.trim()
-    const proj = project.trim()
+    const w = work.trim()
     const tags = tagsInput.split(',').map((s) => s.trim()).filter(Boolean)
     if (!t) return
-    setText(''); setProject(''); setTagsInput('')
+    setText(''); setWork(''); setTagsInput('')
     const { data, error } = await supabase.from('tasks')
-      .insert({ user_id: session.user.id, text: t, project: proj, tags, priority, status: 'todo', done: false })
+      .insert({ user_id: session.user.id, text: t, project: w, tags, priority, status: 'todo', done: false })
       .select().single()
-    if (error) { notify('Couldn\u2019t save that task.'); return }
+    if (error) { notify('Couldn’t save that task.'); return }
     setTasks((ts) => [...ts, data])
   }
 
@@ -53,7 +62,7 @@ export default function TasksPanel() {
   async function moveTask(task, newStatus) {
     const fields = { status: newStatus, done: newStatus === 'completed' }
     await updateTask(task.id, fields)
-    if (newStatus === 'completed') notify('Nice, task complete! \u2727')
+    if (newStatus === 'completed') notify('Nice, task complete! ✧')
   }
 
   async function deleteTask(id) {
@@ -63,79 +72,100 @@ export default function TasksPanel() {
     await supabase.from('tasks').delete().eq('id', id)
   }
 
-  function toggleExpand(id) {
-    setExpanded((e) => ({ ...e, [id]: !e[id] }))
+  function addTagFromChip(tag) {
+    const current = tagsInput.split(',').map((s) => s.trim()).filter(Boolean)
+    if (current.some((c) => c.toLowerCase() === tag.toLowerCase())) return
+    setTagsInput([...current, tag].join(', '))
   }
 
-  async function addSubtask(task, subtaskText) {
-    const t = subtaskText.trim()
-    if (!t) return
-    const next = [...(task.subtasks || []), { text: t, done: false }]
-    await updateTask(task.id, { subtasks: next })
+  // Case-insensitive dedupe — keeps the casing of whichever spelling was
+  // used first, so "Work" and "work" reuse the same entry instead of
+  // silently forking into two.
+  function dedupeCI(values) {
+    const seen = new Map()
+    values.forEach((v) => { const key = v.toLowerCase(); if (!seen.has(key)) seen.set(key, v) })
+    return [...seen.values()]
   }
 
-  async function toggleSubtask(task, idx) {
-    const next = (task.subtasks || []).map((s, i) => i === idx ? { ...s, done: !s.done } : s)
-    await updateTask(task.id, { subtasks: next })
-  }
+  const allWorks = useMemo(
+    () => dedupeCI(tasks.map((t) => (t.project || '').trim()).filter(Boolean)).sort(),
+    [tasks]
+  )
+  const allTags = useMemo(
+    () => dedupeCI(tasks.flatMap((t) => t.tags || [])).sort(),
+    [tasks]
+  )
 
-  async function deleteSubtask(task, idx) {
-    const next = (task.subtasks || []).filter((_, i) => i !== idx)
-    await updateTask(task.id, { subtasks: next })
-  }
+  const visibleTasks = useMemo(() => {
+    if (!tagFilter) return tasks
+    return tasks.filter((t) => (t.tags || []).some((tg) => tg.toLowerCase() === tagFilter.toLowerCase()))
+  }, [tasks, tagFilter])
+
+  // Completed tasks move out of their Work group entirely and into one
+  // trailing "Completed" section — a group's body only ever shows ongoing
+  // work, though its progress stat still counts completed tasks too.
+  const completedTasks = useMemo(
+    () => visibleTasks.filter((t) => t.status === 'completed').sort(byPriorityAndDeadline),
+    [visibleTasks]
+  )
+
+  const workGroups = useMemo(() => {
+    const map = {} // lowercase key -> { name: display casing, allItems, ongoingItems }
+    visibleTasks.forEach((t) => {
+      const raw = (t.project || '').trim()
+      const key = raw ? raw.toLowerCase() : NO_WORK
+      if (!map[key]) map[key] = { name: raw || NO_WORK, allItems: [], ongoingItems: [] }
+      map[key].allItems.push(t)
+      if (t.status !== 'completed') map[key].ongoingItems.push(t)
+    })
+    Object.values(map).forEach((g) => { g.ongoingItems.sort(byPriorityAndDeadline) })
+    return map
+  }, [visibleTasks])
+
+  const workKeys = useMemo(() => {
+    return Object.keys(workGroups)
+      .filter((key) => workGroups[key].ongoingItems.length > 0)
+      .sort((a, b) => {
+        if (a === NO_WORK) return 1
+        if (b === NO_WORK) return -1
+        return workGroups[a].name.localeCompare(workGroups[b].name)
+      })
+  }, [workGroups])
 
   const todayIso = todayIsoLocal()
 
-  function renderCard(t) {
+  function renderCard(t, { showWork = false } = {}) {
     const isOverdue = t.due_date && t.due_date < todayIso && t.status !== 'completed'
-    const subtasks = t.subtasks || []
-    const doneCount = subtasks.filter((s) => s.done).length
 
     return (
       <div key={t.id} className={'task-card' + (t.status === 'completed' ? ' done' : '')}>
         <div className="task-card-top">
           <div className="prio" title={t.priority + ' priority'}>{PRIO_MARK[t.priority] || PRIO_MARK.medium}</div>
-          <EditableText value={t.text} onSave={(v) => updateTask(t.id, { text: v })} className="txt" />
+          <EditableText value={t.text} onSave={(v) => updateTask(t.id, { text: v })} className={'txt' + (t.priority === 'high' ? ' high-priority' : '')} />
+          {t.status === 'completed' && t.minutes_spent > 0 && <span className="done-time">⏱ {t.minutes_spent}m</span>}
           <button className="del" onClick={() => deleteTask(t.id)}>
             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
 
         <div className="meta">
-          {t.project && <span className="proj">{t.project}</span>}
-          {(t.tags || []).map((tag) => <span className="tagpill" key={tag}>#{tag}</span>)}
-          {t.due_date && <span className={'duepill' + (isOverdue ? ' overdue' : '')}>{isOverdue ? 'OVERDUE \u00b7 ' : ''}{t.due_date}</span>}
-          {t.status === 'completed' && t.minutes_spent > 0 && <span className="tagpill">⏱ {t.minutes_spent}m</span>}
+          <span className={'statuspill ' + t.status}>{STATUS_LABEL[t.status]}</span>
+          {showWork && <span className="tagpill">{(t.project || '').trim() || NO_WORK}</span>}
+          {(t.tags || []).map((tag) => (
+            <span className="tagpill" key={tag} onClick={() => setTagFilter(tag)} title={`Show all tasks tagged #${tag}`}>#{tag}</span>
+          ))}
+          {t.due_date && <span className={'duepill' + (isOverdue ? ' overdue' : '')}>{isOverdue ? 'OVERDUE · ' : ''}{t.due_date}</span>}
+          {t.status !== 'completed' && t.minutes_spent > 0 && <span className="tagpill">⏱ {t.minutes_spent}m</span>}
         </div>
 
         <div className="task-card-controls">
           <input type="date" value={t.due_date || ''} onChange={(e) => updateTask(t.id, { due_date: e.target.value || null })} data-no-drag />
-          <button className="chip" onClick={() => toggleExpand(t.id)}>
-            Subtasks {subtasks.length ? `(${doneCount}/${subtasks.length})` : ''}
-          </button>
           <div className="col-move">
-            {COLUMNS.filter((c) => c.status !== t.status).map((c) => (
+            {STATUSES.filter((c) => c.status !== t.status).map((c) => (
               <button key={c.status} className="chip" onClick={() => moveTask(t, c.status)}>→ {c.label}</button>
             ))}
           </div>
         </div>
-
-        {expanded[t.id] && (
-          <div className="subtasks-box">
-            {subtasks.map((s, i) => (
-              <div className="subtask-row" key={i}>
-                <button className="check small" onClick={() => toggleSubtask(t, i)}>
-                  {s.done && <svg viewBox="0 0 24 24" fill="none" strokeWidth="3"><path d="M4 12l5 5L20 6" /></svg>}
-                </button>
-                <span className={s.done ? 'sub-done' : ''}>{s.text}</span>
-                <button className="del" onClick={() => deleteSubtask(t, i)}>
-                  <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                </button>
-              </div>
-            ))}
-            <SubtaskAdd onAdd={(v) => addSubtask(t, v)} />
-          </div>
-        )}
       </div>
     )
   }
@@ -147,8 +177,11 @@ export default function TasksPanel() {
       <div className="add-row">
         <input id="task-text" type="text" placeholder="Add a task…" value={text}
           onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
-        <input id="task-project" type="text" placeholder="Project" value={project}
-          onChange={(e) => setProject(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
+        <input id="task-work" type="text" placeholder="Work" list="work-options" value={work}
+          onChange={(e) => setWork(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
+        <datalist id="work-options">
+          {allWorks.map((w) => <option key={w} value={w} />)}
+        </datalist>
         <input id="task-tags" type="text" placeholder="Tags, comma separated" value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
         <select id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value)}>
@@ -159,21 +192,49 @@ export default function TasksPanel() {
         <button className="btn" onClick={addTask}>Add</button>
       </div>
 
-      <div className="task-columns">
-        {COLUMNS.map((col) => {
-          const items = tasks
-            .filter((t) => t.status === col.status)
-            .sort((a, b) => PRIO_RANK[a.priority] - PRIO_RANK[b.priority] || new Date(b.created_at) - new Date(a.created_at))
+      {allTags.length > 0 && (
+        <div className="recent-tags-row">
+          {allTags.map((tag) => <span key={tag} className="chip small" onClick={() => addTagFromChip(tag)}>#{tag}</span>)}
+        </div>
+      )}
+
+      {tagFilter && (
+        <div className="active-filter-row">
+          Showing tasks tagged <strong>#{tagFilter}</strong>
+          <span className="chip small" onClick={() => setTagFilter(null)}>Clear ✕</span>
+        </div>
+      )}
+
+      <div className="work-groups">
+        {workKeys.map((key) => {
+          const { name, allItems, ongoingItems } = workGroups[key]
+          const doneCount = allItems.filter((t) => t.status === 'completed').length
+          const minutesTotal = allItems.reduce((sum, t) => sum + (t.minutes_spent || 0), 0)
           return (
-            <div className="task-column" key={col.status}>
-              <div className="task-column-head">{col.label} <span>{items.length}</span></div>
-              <div className="task-column-body">
-                {items.map(renderCard)}
-                {items.length === 0 && <div className="col-empty">—</div>}
+            <div className="work-group" key={key}>
+              <div className="work-group-head">
+                <span className="name">{name}</span>
+                <span className="progress">{doneCount}/{allItems.length} done · {minutesTotal}m tracked</span>
+              </div>
+              <div className="work-group-body">
+                {ongoingItems.map((t) => renderCard(t))}
               </div>
             </div>
           )
         })}
+        {workKeys.length === 0 && <div className="col-empty">Nothing ongoing — add a task above.</div>}
+
+        {completedTasks.length > 0 && (
+          <div className="work-group" id="completed-section">
+            <div className="work-group-head">
+              <span className="name">Completed</span>
+              <span className="progress">{completedTasks.length} done</span>
+            </div>
+            <div className="work-group-body">
+              {completedTasks.map((t) => renderCard(t, { showWork: true }))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
@@ -196,18 +257,5 @@ function EditableText({ value, onSave, className }) {
       onBlur={() => { setEditing(false); if (draft.trim() && draft !== value) onSave(draft.trim()) }}
       onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
     />
-  )
-}
-
-function SubtaskAdd({ onAdd }) {
-  const [v, setV] = useState('')
-  return (
-    <div className="subtask-add">
-      <input
-        type="text" placeholder="Add subtask…" value={v} data-no-drag
-        onChange={(e) => setV(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && v.trim()) { onAdd(v); setV('') } }}
-      />
-    </div>
   )
 }

@@ -2,11 +2,32 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../supabaseClient.js'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useNotify } from '../../context/NotificationContext.jsx'
-import { timeAgo } from '../../lib/utils.js'
+import { timeAgo, toDatetimeLocalValue, isoDate, pad } from '../../lib/utils.js'
+import { createGoogleCalendarEvent } from '../../lib/googleCalendar.js'
 import DrawingCanvas from '../notes/DrawingCanvas.jsx'
 import VoiceRecorder from '../notes/VoiceRecorder.jsx'
 
 const NOTE_COLORS = ['', '#FF1493', '#FF69B4', '#C2185B', '#FF8DC7', '#FFB6D9']
+
+// Fills a whole note box with its chosen color. Re-pointing --text/--text-dim/
+// --text-faint/--line locally (rather than only setting `background`) makes
+// every descendant that reads those vars — chips, inputs, the rich-text
+// toolbar, word count — repaint dark-on-color instead of the normal
+// light-on-dark palette, so the fill stays readable regardless of which
+// note color is picked.
+function tintStyle(color) {
+  if (!color) return undefined
+  return {
+    background: color,
+    color: 'var(--pink-text)',
+    '--text': 'var(--pink-text)',
+    '--text-dim': 'rgba(0,0,0,.65)',
+    '--text-faint': 'rgba(0,0,0,.48)',
+    '--line': 'rgba(0,0,0,.2)',
+    '--line-strong': 'rgba(0,0,0,.35)',
+    '--surface-2': 'rgba(0,0,0,.14)'
+  }
+}
 const TEMPLATES = {
   'Daily Journal': '# Daily Journal\n\nHow today went:\n\nWhat I\u2019m grateful for:\n\nTomorrow I want to:\n',
   'Meeting Notes': '# Meeting Notes\n\nAttendees:\n\nAgenda:\n\nAction items:\n',
@@ -14,7 +35,7 @@ const TEMPLATES = {
 }
 
 export default function NotesPanel() {
-  const { session } = useAuth()
+  const { session, getGoogleToken } = useAuth()
   const { notify, confirmDialog } = useNotify()
   const [notes, setNotes] = useState([])
   const [folders, setFolders] = useState([])
@@ -54,6 +75,7 @@ export default function NotesPanel() {
         else if (n.reminder_recurrence === 'weekly') { const d = new Date(due); d.setDate(d.getDate() + 7); nextAt = d.toISOString() }
         await supabase.from('notes').update({ reminder_at: nextAt }).eq('id', n.id)
         setNotes((ns) => ns.map((x) => x.id === n.id ? { ...x, reminder_at: nextAt } : x))
+        await syncReminderCalendar(n, nextAt)
       }
     }
   }
@@ -72,7 +94,10 @@ export default function NotesPanel() {
   function select(id) {
     setCurrentId(id)
     setTimeout(() => {
-      if (bodyRef.current) bodyRef.current.innerHTML = notes.find((n) => n.id === id)?.html_body || ''
+      if (bodyRef.current) {
+        bodyRef.current.innerHTML = notes.find((n) => n.id === id)?.html_body || ''
+        linkifyNoteBody(bodyRef.current)
+      }
     }, 0)
   }
 
@@ -88,6 +113,34 @@ export default function NotesPanel() {
   async function updateNote(id, fields) {
     setNotes((ns) => ns.map((n) => n.id === id ? { ...n, ...fields } : n))
     await supabase.from('notes').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', id)
+  }
+
+  // Keeps a note's reminder mirrored onto the in-app calendar (and Google
+  // Calendar, if connected) — one calendar_events row per note, matched by
+  // note_id, so re-setting the reminder updates it instead of duplicating it.
+  async function syncReminderCalendar(note, reminderIso) {
+    if (!reminderIso) {
+      await supabase.from('calendar_events').delete().eq('note_id', note.id)
+      return
+    }
+    const d = new Date(reminderIso)
+    const date = isoDate(d.getFullYear(), d.getMonth(), d.getDate())
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const title = note.title || 'Untitled note'
+
+    const { data, error } = await supabase.from('calendar_events')
+      .upsert(
+        { user_id: session.user.id, note_id: note.id, date, time, title, category: 'Reminder', color: '#FF1493' },
+        { onConflict: 'note_id' }
+      )
+      .select().single()
+    if (error) { notify('Reminder saved, but couldn’t sync it to the calendar.'); return }
+
+    const token = getGoogleToken()
+    if (token) {
+      const result = await createGoogleCalendarEvent(token, { title, date, time, category: 'Reminder' })
+      if (result.id) await supabase.from('calendar_events').update({ google_event_id: result.id }).eq('id', data.id)
+    }
   }
 
   async function deleteNote(id) {
@@ -108,15 +161,92 @@ export default function NotesPanel() {
     }, 500)
   }
 
+  async function onReminderChange(reminderIso) {
+    await updateNote(currentId, { reminder_at: reminderIso })
+    await syncReminderCalendar(current, reminderIso)
+  }
+
   function onTitleChange(v) {
     setNotes((ns) => ns.map((n) => n.id === currentId ? { ...n, title: v } : n))
     scheduleSave({ title: v })
   }
 
   function onRichInput() {
+    linkifyAtCursor()
     const html = bodyRef.current.innerHTML
     const text = bodyRef.current.innerText
     scheduleSave({ html_body: html, body: text })
+  }
+
+  // Turns a just-completed "[[Title]]" right before the cursor into a
+  // clickable in-place link span, without touching the rest of the note
+  // (a full-content re-render on every keystroke would keep bouncing the
+  // cursor back to the start of the contentEditable div).
+  function linkifyAtCursor() {
+    const sel = window.getSelection()
+    if (!sel || !sel.isCollapsed || !sel.anchorNode) return
+    const node = sel.anchorNode
+    if (node.nodeType !== Node.TEXT_NODE) return
+    const offset = sel.anchorOffset
+    const m = node.textContent.slice(0, offset).match(/\[\[([^[\]]+)\]\]$/)
+    if (!m) return
+
+    const range = document.createRange()
+    range.setStart(node, offset - m[0].length)
+    range.setEnd(node, offset)
+    range.deleteContents()
+
+    const span = document.createElement('span')
+    span.className = 'note-link'
+    span.dataset.title = m[1]
+    span.textContent = m[0]
+    range.insertNode(span)
+
+    const after = document.createTextNode('​')
+    span.after(after)
+    const newRange = document.createRange()
+    newRange.setStart(after, 1)
+    newRange.collapse(true)
+    sel.removeAllRanges()
+    sel.addRange(newRange)
+  }
+
+  // Catches "[[Title]]" occurrences that weren't typed live — pasted text,
+  // or notes saved before this feature existed — when a note is opened.
+  function linkifyNoteBody(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => n.parentElement?.closest('.note-link') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+    })
+    const nodes = []
+    let n
+    while ((n = walker.nextNode())) nodes.push(n)
+
+    nodes.forEach((textNode) => {
+      const text = textNode.textContent
+      const re = /\[\[([^[\]]+)\]\]/g
+      if (!re.test(text)) return
+      re.lastIndex = 0
+      const frag = document.createDocumentFragment()
+      let last = 0
+      let m
+      while ((m = re.exec(text))) {
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
+        const span = document.createElement('span')
+        span.className = 'note-link'
+        span.dataset.title = m[1]
+        span.textContent = m[0]
+        frag.appendChild(span)
+        last = m.index + m[0].length
+      }
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)))
+      textNode.replaceWith(frag)
+    })
+  }
+
+  function onNoteBodyClick(e) {
+    const link = e.target.closest('.note-link')
+    if (!link) return
+    goToBacklink(link.dataset.title)
   }
 
   function exec(cmd, value = null) {
@@ -289,7 +419,7 @@ export default function NotesPanel() {
               <div
                 key={n.id}
                 className={'note-card' + (n.id === currentId ? ' active' : '')}
-                style={n.color ? { borderColor: n.color } : undefined}
+                style={tintStyle(n.color)}
                 onClick={() => select(n.id)}
               >
                 <div className="t">{n.pinned ? '\u{1F4CC} ' : ''}{n.title || 'Untitled'}</div>
@@ -301,7 +431,7 @@ export default function NotesPanel() {
           </div>
         </div>
 
-        <div id="notes-editor" className="card">
+        <div id="notes-editor" className="card" style={tintStyle(current?.color)}>
           {!current ? (
             <div id="notes-editor-empty">
               <div>No note selected ⋆ pick one or start fresh!</div>
@@ -341,8 +471,8 @@ export default function NotesPanel() {
 
               <div className="reminder-row">
                 <label>Reminder</label>
-                <input type="datetime-local" value={current.reminder_at ? current.reminder_at.slice(0, 16) : ''}
-                  onChange={(e) => updateNote(currentId, { reminder_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
+                <input type="datetime-local" value={toDatetimeLocalValue(current.reminder_at)}
+                  onChange={(e) => onReminderChange(e.target.value ? new Date(e.target.value).toISOString() : null)} />
                 <select value={current.reminder_recurrence || 'none'} onChange={(e) => updateNote(currentId, { reminder_recurrence: e.target.value })}>
                   <option value="none">Once</option>
                   <option value="daily">Daily</option>
@@ -376,7 +506,7 @@ export default function NotesPanel() {
                   </div>
                   <div
                     id="note-body" ref={bodyRef} contentEditable suppressContentEditableWarning
-                    onInput={onRichInput} data-placeholder="Write here… use [[Note Title]] to link other notes"
+                    onInput={onRichInput} onClick={onNoteBodyClick} data-placeholder="Write here… use [[Note Title]] to link other notes"
                   />
                   {(current.body.match(/\[\[([^\]]+)\]\]/g) || []).length > 0 && (
                     <div className="backlinks-row">

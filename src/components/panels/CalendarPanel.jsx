@@ -176,6 +176,7 @@ export default function CalendarPanel() {
               <div className="time">{e.time || ''}</div>
               <div className="title">{e.title}{e.category && <span className="event-cat"> \u00b7 {e.category}</span>}</div>
               {(e.google_event_id || e.source === 'google') && <span className="event-synced" title="From Google Calendar">G</span>}
+              {e.note_id && <span className="event-synced" title="From a note reminder">N</span>}
               {e.source !== 'google' && (
                 <button className="del" onClick={() => deleteEvent(e.id)}>
                   <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8"><path d="M18 6L6 18M6 6l12 12" /></svg>
